@@ -1,0 +1,112 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Transcriber with Fallbacks</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "@xenova/transformers": "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0/dist/transformers.min.js",
+            "recordrtc": "https://cdn.jsdelivr.net/npm/recordrtc@5.6.2/RecordRTC.min.js"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Audio Transcriber</h1>
+        <p class="subtitle">Client-side transcription with multiple fallback options</p>
+        
+        <div class="upload-section">
+            <div class="file-upload">
+                <label for="audioFileInput" class="upload-label">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path>
+                    </svg>
+                    Choose Audio File
+                </label>
+                <input type="file" id="audioFileInput" accept="audio/*" class="file-input">
+            </div>
+            <div>
+                <button id="recordButton" class="record-btn">
+                    <svg viewBox="0 0 24 24" width="24" height="24" class="record-icon">
+                        <circle cx="12" cy="12" r="8"></circle>
+                    </svg>
+                    Record Audio
+                </button>
+                <button id="stopButton" class="stop-btn hidden">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <rect x="6" y="6" width="12" height="12"></rect>
+                    </svg>
+                    Stop Recording
+                </button>
+            </div>
+        </div>
+
+        <div class="audio-player hidden" id="audioPlayerContainer">
+            <h3>Audio Preview</h3>
+            <audio id="audioPlayer" controls></audio>
+        </div>
+
+        <div class="status-container">
+            <div id="statusMessage" class="status-message"></div>
+            <div id="progressContainer" class="progress-container hidden">
+                <div id="progressBar" class="progress-bar"></div>
+            </div>
+        </div>
+
+        <div class="models-container">
+            <h3>Select Transcription Engine:</h3>
+            <div class="model-options">
+                <label class="model-option">
+                    <input type="radio" name="model" value="whisper" checked>
+                    <span class="checkmark"></span>
+                    <div>
+                        <span class="model-name">Whisper.js</span>
+                        <span class="model-desc">High accuracy, ~75MB model</span>
+                    </div>
+                </label>
+                <label class="model-option">
+                    <input type="radio" name="model" value="vosk">
+                    <span class="checkmark"></span>
+                    <div>
+                        <span class="model-name">Vosk.js</span>
+                        <span class="model-desc">Fast, lightweight, ~50MB model</span>
+                    </div>
+                </label>
+                <label class="model-option">
+                    <input type="radio" name="model" value="coqui">
+                    <span class="checkmark"></span>
+                    <div>
+                        <span class="model-name">Coqui STT</span>
+                        <span class="model-desc">Mozilla DeepSpeech-based</span>
+                    </div>
+                </label>
+                <label class="model-option">
+                    <input type="radio" name="model" value="api">
+                    <span class="checkmark"></span>
+                    <div>
+                        <span class="model-name">External API</span>
+                        <span class="model-desc">Cloud-based transcription</span>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <div class="result-container hidden" id="resultContainer">
+            <h2>Transcription Result</h2>
+            <div id="transcriptionResult" class="transcription-result"></div>
+            <div class="transcription-info">
+                <div>Engine: <span id="usedEngine">-</span></div>
+                <div>Processing time: <span id="processingTime">-</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="config.js"></script>
+    <script type="module" src="transcriber.js"></script>
+    <script type="module" src="app.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
