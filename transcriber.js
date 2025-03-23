@@ -92,93 +92,48 @@ export class Transcriber {
     // Transcribe with Whisper.js
     async transcribeWithWhisper(transcriber, audioBlob) {
         try {
-            // Convert audio blob to proper format
+            // Convert audio blob to ArrayBuffer
             const audioArrayBuffer = await audioBlob.arrayBuffer();
             
-            // Use AudioContext to process the audio
+            // Create an audio element to decode the audio
+            const audioEl = document.createElement('audio');
+            audioEl.src = URL.createObjectURL(audioBlob);
+            
+            // Use temporary canvas audio context for processing
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const audioData = await audioContext.decodeAudioData(audioArrayBuffer);
             
-            // Apply vocal isolation processing
-            const processedAudio = await this.isolateVocals(audioData, audioContext);
+            // Load audio as audio buffer
+            const audioSource = audioContext.createMediaElementSource(audioEl);
+            const analyser = audioContext.createAnalyser();
+            audioSource.connect(analyser);
             
-            // Process the audio with Whisper
-            const result = await transcriber(processedAudio, config.engines.whisper.options);
+            // Wait for the audio to load metadata
+            await new Promise(resolve => {
+                audioEl.addEventListener('loadedmetadata', resolve);
+                audioEl.load();
+            });
+            
+            // Get audio data as float32array (what Whisper expects)
+            const audioData = await fetch(URL.createObjectURL(audioBlob))
+                .then(r => r.arrayBuffer())
+                .then(buffer => audioContext.decodeAudioData(buffer));
+            
+            const audioFloat32Array = audioData.getChannelData(0);
+            
+            // Process with appropriate sampling rate
+            const result = await transcriber(audioFloat32Array, {
+                ...config.engines.whisper.options,
+                sampling_rate: audioData.sampleRate
+            });
+            
+            // Clean up
+            URL.revokeObjectURL(audioEl.src);
+            audioContext.close();
             
             return result.text;
         } catch (error) {
             console.error('Whisper transcription error:', error);
             throw error;
-        }
-    }
-    
-    // Isolate vocals and filter out instrumental sounds
-    async isolateVocals(audioData, audioContext) {
-        try {
-            const sourceBuffer = audioContext.createBufferSource();
-            sourceBuffer.buffer = audioData;
-            
-            // Create an offline context to process audio
-            const offlineCtx = new OfflineAudioContext(
-                audioData.numberOfChannels,
-                audioData.length,
-                audioData.sampleRate
-            );
-            
-            // Create source from original audio
-            const source = offlineCtx.createBufferSource();
-            source.buffer = audioData;
-            
-            // Create filters to isolate human voice frequencies (typically 80Hz-255Hz for males, 165Hz-400Hz for females)
-            // We'll use a wider range to be safe (80Hz-1000Hz)
-            const lowPassFilter = offlineCtx.createBiquadFilter();
-            lowPassFilter.type = 'lowpass';
-            lowPassFilter.frequency.value = 1000; // Upper frequency limit for vocals
-            lowPassFilter.Q.value = 0.5;
-            
-            const highPassFilter = offlineCtx.createBiquadFilter();
-            highPassFilter.type = 'highpass';
-            highPassFilter.frequency.value = 80; // Lower frequency limit for vocals
-            highPassFilter.Q.value = 0.5;
-            
-            // Create a compressor to enhance vocals
-            const compressor = offlineCtx.createDynamicsCompressor();
-            compressor.threshold.value = -50;
-            compressor.ratio.value = 12;
-            compressor.attack.value = 0;
-            compressor.release.value = 0.25;
-            
-            // Connect the audio processing pipeline
-            source.connect(highPassFilter);
-            highPassFilter.connect(lowPassFilter);
-            lowPassFilter.connect(compressor);
-            compressor.connect(offlineCtx.destination);
-            
-            // Start the source
-            source.start(0);
-            
-            // Process audio
-            const renderedBuffer = await offlineCtx.startRendering();
-            
-            // Convert the processed buffer to a Float32Array for the transcriber
-            let processedAudio;
-            if (renderedBuffer.numberOfChannels > 1) {
-                // Mix down to mono if needed
-                const left = renderedBuffer.getChannelData(0);
-                const right = renderedBuffer.getChannelData(1);
-                processedAudio = new Float32Array(left.length);
-                for (let i = 0; i < left.length; i++) {
-                    processedAudio[i] = (left[i] + right[i]) / 2;
-                }
-            } else {
-                processedAudio = renderedBuffer.getChannelData(0);
-            }
-            
-            return processedAudio;
-        } catch (error) {
-            console.error('Error in vocal isolation:', error);
-            // Fall back to the original audio converted to Float32Array
-            return audioData.getChannelData(0);
         }
     }
 

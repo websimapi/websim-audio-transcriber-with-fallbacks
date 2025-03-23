@@ -9,13 +9,6 @@ export const config = {
             options: {
                 chunk_length_s: 30,
                 stride_length_s: 5
-            },
-            audioProcessing: {
-                enabled: true,
-                vocalFreqMin: 80,    // Minimum frequency for human voice (Hz)
-                vocalFreqMax: 1000,  // Maximum frequency for human voice (Hz)
-                compressionThreshold: -50,
-                compressionRatio: 12
             }
         },
         
@@ -60,3 +53,4 @@ export const config = {
         audioBitsPerSecond: 128000
     }
 };
+
