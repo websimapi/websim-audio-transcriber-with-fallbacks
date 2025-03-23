@@ -102,10 +102,38 @@ export class Transcriber {
             // Convert to the format expected by Whisper
             const audioFloat32Array = audioData.getChannelData(0);
             
-            // Process the audio with Whisper
-            const result = await transcriber(audioFloat32Array, config.engines.whisper.options);
+            // Process the audio with Whisper - using better settings for speech in music
+            const result = await transcriber(audioFloat32Array, {
+                ...config.engines.whisper.options,
+                // These options help focus on speech in music
+                return_timestamps: true,  // Get timestamps
+                suppress_tokens: [-1],    // Don't suppress any tokens
+                condition_on_previous_text: true, // Improve continuity 
+                language: 'en',           // Specify language to improve recognition
+                task: 'transcribe'        // Focus on transcription not translation
+            });
             
-            return result.text;
+            // Process to filter out just music notifications
+            let text = result.text;
+            
+            // Replace common music labels with empty strings if there's no other content
+            const musicLabels = [
+                /^\[Music\]$/i, 
+                /^\[MUSIC PLAYING\]$/i, 
+                /^\(dramatic music\)$/i,
+                /^\(music\)$/i
+            ];
+            
+            for (const pattern of musicLabels) {
+                text = text.replace(pattern, '');
+            }
+            
+            // Clean up the text
+            text = text.replace(/\[\s*Music\s*\]/gi, ''); // Remove [Music] tags
+            text = text.replace(/\(\s*dramatic music\s*\)/gi, ''); // Remove (dramatic music) tags
+            text = text.trim();
+            
+            return text || "No speech detected in the audio, only music.";
         } catch (error) {
             console.error('Whisper transcription error:', error);
             throw error;

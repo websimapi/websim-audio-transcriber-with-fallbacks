@@ -21,11 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const usedEngine = document.getElementById('usedEngine');
     const processingTime = document.getElementById('processingTime');
     const modelOptions = document.querySelectorAll('input[name="model"]');
+    const retranscribeButton = document.getElementById('retranscribeButton');
 
     // Event Listeners
     audioFileInput.addEventListener('change', handleFileUpload);
     recordButton.addEventListener('click', startRecording);
     stopButton.addEventListener('click', stopRecording);
+    retranscribeButton.addEventListener('click', startTranscription);
     
     // File upload handler
     async function handleFileUpload(event) {
@@ -188,4 +190,3 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(error => console.log('Preloading Whisper failed:', error));
     }, 1000);
 });
-
