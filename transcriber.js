@@ -95,48 +95,90 @@ export class Transcriber {
             // Convert audio blob to proper format
             const audioArrayBuffer = await audioBlob.arrayBuffer();
             
-            // Use FileReader to properly process the audio file
+            // Use AudioContext to process the audio
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const audioData = await audioContext.decodeAudioData(audioArrayBuffer);
             
-            // Convert to the format expected by Whisper
-            const audioFloat32Array = audioData.getChannelData(0);
+            // Apply vocal isolation processing
+            const processedAudio = await this.isolateVocals(audioData, audioContext);
             
-            // Process the audio with Whisper - using better settings for speech in music
-            const result = await transcriber(audioFloat32Array, {
-                ...config.engines.whisper.options,
-                // These options help focus on speech in music
-                return_timestamps: true,  // Get timestamps
-                suppress_tokens: [-1],    // Don't suppress any tokens
-                condition_on_previous_text: true, // Improve continuity 
-                language: 'en',           // Specify language to improve recognition
-                task: 'transcribe'        // Focus on transcription not translation
-            });
+            // Process the audio with Whisper
+            const result = await transcriber(processedAudio, config.engines.whisper.options);
             
-            // Process to filter out just music notifications
-            let text = result.text;
-            
-            // Replace common music labels with empty strings if there's no other content
-            const musicLabels = [
-                /^\[Music\]$/i, 
-                /^\[MUSIC PLAYING\]$/i, 
-                /^\(dramatic music\)$/i,
-                /^\(music\)$/i
-            ];
-            
-            for (const pattern of musicLabels) {
-                text = text.replace(pattern, '');
-            }
-            
-            // Clean up the text
-            text = text.replace(/\[\s*Music\s*\]/gi, ''); // Remove [Music] tags
-            text = text.replace(/\(\s*dramatic music\s*\)/gi, ''); // Remove (dramatic music) tags
-            text = text.trim();
-            
-            return text || "No speech detected in the audio, only music.";
+            return result.text;
         } catch (error) {
             console.error('Whisper transcription error:', error);
             throw error;
+        }
+    }
+    
+    // Isolate vocals and filter out instrumental sounds
+    async isolateVocals(audioData, audioContext) {
+        try {
+            const sourceBuffer = audioContext.createBufferSource();
+            sourceBuffer.buffer = audioData;
+            
+            // Create an offline context to process audio
+            const offlineCtx = new OfflineAudioContext(
+                audioData.numberOfChannels,
+                audioData.length,
+                audioData.sampleRate
+            );
+            
+            // Create source from original audio
+            const source = offlineCtx.createBufferSource();
+            source.buffer = audioData;
+            
+            // Create filters to isolate human voice frequencies (typically 80Hz-255Hz for males, 165Hz-400Hz for females)
+            // We'll use a wider range to be safe (80Hz-1000Hz)
+            const lowPassFilter = offlineCtx.createBiquadFilter();
+            lowPassFilter.type = 'lowpass';
+            lowPassFilter.frequency.value = 1000; // Upper frequency limit for vocals
+            lowPassFilter.Q.value = 0.5;
+            
+            const highPassFilter = offlineCtx.createBiquadFilter();
+            highPassFilter.type = 'highpass';
+            highPassFilter.frequency.value = 80; // Lower frequency limit for vocals
+            highPassFilter.Q.value = 0.5;
+            
+            // Create a compressor to enhance vocals
+            const compressor = offlineCtx.createDynamicsCompressor();
+            compressor.threshold.value = -50;
+            compressor.ratio.value = 12;
+            compressor.attack.value = 0;
+            compressor.release.value = 0.25;
+            
+            // Connect the audio processing pipeline
+            source.connect(highPassFilter);
+            highPassFilter.connect(lowPassFilter);
+            lowPassFilter.connect(compressor);
+            compressor.connect(offlineCtx.destination);
+            
+            // Start the source
+            source.start(0);
+            
+            // Process audio
+            const renderedBuffer = await offlineCtx.startRendering();
+            
+            // Convert the processed buffer to a Float32Array for the transcriber
+            let processedAudio;
+            if (renderedBuffer.numberOfChannels > 1) {
+                // Mix down to mono if needed
+                const left = renderedBuffer.getChannelData(0);
+                const right = renderedBuffer.getChannelData(1);
+                processedAudio = new Float32Array(left.length);
+                for (let i = 0; i < left.length; i++) {
+                    processedAudio[i] = (left[i] + right[i]) / 2;
+                }
+            } else {
+                processedAudio = renderedBuffer.getChannelData(0);
+            }
+            
+            return processedAudio;
+        } catch (error) {
+            console.error('Error in vocal isolation:', error);
+            // Fall back to the original audio converted to Float32Array
+            return audioData.getChannelData(0);
         }
     }
 

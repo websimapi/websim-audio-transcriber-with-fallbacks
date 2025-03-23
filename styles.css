@@ -292,31 +292,6 @@ audio {
     color: #718096;
 }
 
-.retranscribe-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px 16px;
-    background-color: #e2f0fd;
-    color: #3182ce;
-    border: 2px solid #3182ce;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 600;
-    margin-top: 15px;
-    width: 100%;
-}
-
-.retranscribe-btn:hover {
-    background-color: #bed8f4;
-}
-
-.retranscribe-btn svg {
-    fill: currentColor;
-}
-
 .hidden {
     display: none;
 }
@@ -330,3 +305,4 @@ audio {
         grid-template-columns: 1fr;
     }
 }
+

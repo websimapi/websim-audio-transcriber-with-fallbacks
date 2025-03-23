@@ -5,10 +5,17 @@ export const config = {
     engines: {
         // Whisper.js configuration
         whisper: {
-            model: 'Xenova/whisper-small.en', // Changed from tiny to small for better music/speech detection
+            model: 'Xenova/whisper-tiny.en', // Default model
             options: {
                 chunk_length_s: 30,
                 stride_length_s: 5
+            },
+            audioProcessing: {
+                enabled: true,
+                vocalFreqMin: 80,    // Minimum frequency for human voice (Hz)
+                vocalFreqMax: 1000,  // Maximum frequency for human voice (Hz)
+                compressionThreshold: -50,
+                compressionRatio: 12
             }
         },
         
