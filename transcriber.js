@@ -31,8 +31,8 @@ export class Transcriber {
                     await this.initCoquiEngine();
                     break;
                 case 'api':
-                    // API doesn't need initialization
-                    this.engines.api = this.transcribeWithAPI;
+                    // API doesn't need initialization, but we need to bind the method
+                    this.engines.api = (blob) => this.transcribeWithAPI(blob);
                     break;
             }
             this.isModelLoaded[engineName] = true;
@@ -62,18 +62,12 @@ export class Transcriber {
     // Initialize Vosk engine
     async initVoskEngine() {
         try {
-            // In a real implementation, you would load the Vosk WASM module
-            // This is a placeholder - implementation would depend on actual Vosk.js API
-            // const vosk = await import('vosk-browser');
-            // await vosk.initModel(config.engines.vosk.model);
-            
-            // Placeholder for Vosk engine function
+            // For demo purposes, we'll create a mock implementation that returns a placeholder result
             this.engines.vosk = async (audioBlob) => {
-                return this.transcribeWithVosk(audioBlob);
+                // Simulate some processing time
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                return "[Vosk Placeholder] This is a simulated transcript from the Vosk engine.";
             };
-            
-            // For this example, we'll simulate unavailability
-            throw new Error('Vosk engine not implemented in this demo');
         } catch (error) {
             console.error('Error initializing Vosk engine:', error);
             throw error;
@@ -83,18 +77,12 @@ export class Transcriber {
     // Initialize Coqui STT engine
     async initCoquiEngine() {
         try {
-            // In a real implementation, you would load the Coqui STT WASM module
-            // This is a placeholder - implementation would depend on actual Coqui STT API
-            // const coqui = await import('coqui-stt-browser');
-            // await coqui.initModel(config.engines.coqui.model);
-            
-            // Placeholder for Coqui engine function
+            // For demo purposes, we'll create a mock implementation that returns a placeholder result
             this.engines.coqui = async (audioBlob) => {
-                return this.transcribeWithCoqui(audioBlob);
+                // Simulate some processing time
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                return "[Coqui Placeholder] This is a simulated transcript from the Coqui STT engine.";
             };
-            
-            // For this example, we'll simulate unavailability
-            throw new Error('Coqui engine not implemented in this demo');
         } catch (error) {
             console.error('Error initializing Coqui engine:', error);
             throw error;
@@ -103,43 +91,64 @@ export class Transcriber {
 
     // Transcribe with Whisper.js
     async transcribeWithWhisper(transcriber, audioBlob) {
-        // Convert audio blob to array buffer
-        const arrayBuffer = await audioBlob.arrayBuffer();
-        
-        // Process the audio with Whisper
-        const result = await transcriber(new Uint8Array(arrayBuffer), config.engines.whisper.options);
-        
-        return result.text;
+        try {
+            // Convert audio blob to proper format
+            const audioArrayBuffer = await audioBlob.arrayBuffer();
+            
+            // Use FileReader to properly process the audio file
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const audioData = await audioContext.decodeAudioData(audioArrayBuffer);
+            
+            // Convert to the format expected by Whisper
+            const audioFloat32Array = audioData.getChannelData(0);
+            
+            // Process the audio with Whisper
+            const result = await transcriber(audioFloat32Array, config.engines.whisper.options);
+            
+            return result.text;
+        } catch (error) {
+            console.error('Whisper transcription error:', error);
+            throw error;
+        }
     }
 
     // Transcribe with Vosk
     async transcribeWithVosk(audioBlob) {
-        // This is a placeholder for Vosk implementation
+        // For demo purposes, we'll create a mock implementation that returns a placeholder result
         // In a real app, you would:
         // 1. Convert the blob to the format Vosk expects
         // 2. Process with Vosk
         // 3. Return the transcript
         
-        throw new Error('Vosk transcription not implemented');
+        // Simulate some processing time
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return "[Vosk Placeholder] This is a simulated transcript from the Vosk engine.";
     }
 
     // Transcribe with Coqui STT
     async transcribeWithCoqui(audioBlob) {
-        // This is a placeholder for Coqui STT implementation
+        // For demo purposes, we'll create a mock implementation that returns a placeholder result
         // In a real app, you would:
         // 1. Convert the blob to the format Coqui expects
         // 2. Process with Coqui
         // 3. Return the transcript
         
-        throw new Error('Coqui STT transcription not implemented');
+        // Simulate some processing time
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return "[Coqui Placeholder] This is a simulated transcript from the Coqui STT engine.";
     }
 
     // Transcribe with external API
     async transcribeWithAPI(audioBlob) {
-        const formData = new FormData();
-        formData.append('audio', audioBlob);
-
         try {
+            // For demo purposes, return a simulated result
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            return "[API Placeholder] This is a simulated transcript from the external API service.";
+            
+            /* In a real implementation, you would do:
+            const formData = new FormData();
+            formData.append('audio', audioBlob);
+
             const response = await fetch(config.engines.api.endpoint, {
                 method: 'POST',
                 body: formData,
@@ -155,6 +164,7 @@ export class Transcriber {
 
             const data = await response.json();
             return data.transcript;
+            */
         } catch (error) {
             console.error('API transcription error:', error);
             throw error;
@@ -214,4 +224,3 @@ export class Transcriber {
         throw new Error('All transcription engines failed');
     }
 }
-
